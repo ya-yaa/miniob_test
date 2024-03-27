@@ -42,7 +42,7 @@ Case程序自动化运行脚本
 
 How to use:
 运行所有测试用例：
-python3 miniob_test.py
+python3 miniob_test.pyS
 
 运行 basic 测试用例
 python3 miniob_test.py --test-cases=basic

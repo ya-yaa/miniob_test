@@ -20,6 +20,17 @@ See the Mulan PSL v2 for more details. */
 InsertStmt::InsertStmt(Table *table, const Value *values, int value_amount)
     : table_(table), values_(values), value_amount_(value_amount)
 {}
+bool check_date(int date)
+{
+  int y=date/10000;
+  int m=(date%10000)/100;
+  int d=date%100;
+  const int ch[]={0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+  bool flag=((y%4==0&&y%100!=0)||y%400==0);
+  return y > 0
+      && (m > 0)&&(m <= 12)
+      && (d > 0)&&(d <= ((m==2 && flag)?1:0) + ch[m]);
+}
 
 RC InsertStmt::create(Db *db, const InsertSqlNode &inserts, Stmt *&stmt)
 {
@@ -47,6 +58,8 @@ RC InsertStmt::create(Db *db, const InsertSqlNode &inserts, Stmt *&stmt)
     return RC::SCHEMA_FIELD_MISSING;
   }
 
+
+
   // check fields type
   const int sys_field_num = table_meta.sys_field_num();
   for (int i = 0; i < value_num; i++) {
@@ -58,9 +71,18 @@ RC InsertStmt::create(Db *db, const InsertSqlNode &inserts, Stmt *&stmt)
           table_name, field_meta->name(), field_type, value_type);
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
+    if(value_type==DATES)
+    {
+      if(!check_date(values[i].get_date()))
+      {
+        LOG_WARN("INVALID DATE VALUE");
+        return RC::INVALID_ARGUMENT;
+      }
+    }
   }
 
   // everything alright
   stmt = new InsertStmt(table, values, value_num);
   return RC::SUCCESS;
 }
+
