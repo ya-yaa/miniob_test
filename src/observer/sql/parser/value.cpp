@@ -18,8 +18,9 @@ See the Mulan PSL v2 for more details. */
 #include "common/log/log.h"
 #include "common/lang/comparator.h"
 #include "common/lang/string.h"
+#include <iomanip>
 
-const char *ATTR_TYPE_NAME[] = {"undefined", "chars", "ints", "floats", "booleans"};
+const char *ATTR_TYPE_NAME[] = {"undefined", "chars", "ints", "floats", "dates","booleans"};
 
 const char *attr_type_to_string(AttrType type)
 {
@@ -57,6 +58,11 @@ Value::Value(const char *s, int len /*= 0*/)
 {
   set_string(s, len);
 }
+Value::Value(const char* date,int len,int flag){
+  int intDate=0;
+  strDate_to_intDate_(date,intDate);
+  set_date(intDate);
+}
 
 void Value::set_data(char *data, int length)
 {
@@ -76,6 +82,10 @@ void Value::set_data(char *data, int length)
       num_value_.bool_value_ = *(int *)data != 0;
       length_ = length;
     } break;
+    case DATES:{
+      num_value_.date_value_=*(int*)data;
+      length_=length;
+    }break;
     default: {
       LOG_WARN("unknown data type: %d", attr_type_);
     } break;
@@ -87,7 +97,12 @@ void Value::set_int(int val)
   num_value_.int_value_ = val;
   length_ = sizeof(val);
 }
-
+void Value::set_date(int val)
+{
+  attr_type_=DATES;
+  num_value_.date_value_=val;
+  length_ = sizeof(val);
+}
 void Value::set_float(float val)
 {
   attr_type_ = FLOATS;
@@ -127,6 +142,9 @@ void Value::set_value(const Value &value)
     case BOOLEANS: {
       set_boolean(value.get_boolean());
     } break;
+     case DATES:{
+      set_date(value.get_date());
+    }break;
     case UNDEFINED: {
       ASSERT(false, "got an invalid value type");
     } break;
@@ -161,6 +179,16 @@ std::string Value::to_string() const
     case CHARS: {
       os << str_value_;
     } break;
+    case DATES:{
+      int day=num_value_.date_value_;
+      std::ostringstream oss;  
+    oss << std::setfill('0') << std::setw(4) << (day / 10000)  // 年  
+         << "-" << std::setw(2) << ((day / 100) % 100)     // 月  
+         << "-" << std::setw(2) << (day % 100);              // 日 
+    std::string strday;
+    strday=oss.str();
+    os<<strday; 
+    }break;
     default: {
       LOG_WARN("unsupported attr type: %d", attr_type_);
     } break;
@@ -187,6 +215,9 @@ int Value::compare(const Value &other) const
       case BOOLEANS: {
         return common::compare_int((void *)&this->num_value_.bool_value_, (void *)&other.num_value_.bool_value_);
       }
+      case DATES:{
+        return common::compare_date((void*)&this->num_value_.date_value_, (void *)&other.num_value_.date_value_);
+      } break;
       default: {
         LOG_WARN("unsupported type: %d", this->attr_type_);
       }
@@ -229,7 +260,22 @@ int Value::get_int() const
   }
   return 0;
 }
-
+int Value::get_date()const
+{
+  switch (attr_type_)
+  {
+    case DATES:
+    {
+      return num_value_.date_value_;
+    }
+    default:
+    {
+       LOG_WARN("unknown data type. type=%d", attr_type_);
+       return 0;
+    }
+  }
+  return 0;
+}
 float Value::get_float() const
 {
   switch (attr_type_) {
@@ -300,4 +346,31 @@ bool Value::get_boolean() const
     }
   }
   return false;
+}
+void Value::strDate_to_intDate_(const char* strDate,int &intDate)
+{
+  if(strDate==nullptr)
+  {
+    return;
+  }
+    int year=0;
+    int month=0;
+    int day=0;
+    for(int i=0;i<4;i++)
+    {
+      year=10*year+(strDate[i]-'0');
+    }
+    int j=5;
+    while(strDate[j]!='-')
+    {
+      month=month*10+(strDate[j]-'0');
+      j++;
+    }
+    j++;
+    while(strDate[j])
+    {
+      day=day*10+(strDate[j]-'0');
+      j++;
+    }
+  intDate=year*10000+month*100+day;
 }

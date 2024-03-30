@@ -21,6 +21,18 @@ InsertStmt::InsertStmt(Table *table, const Value *values, int value_amount)
     : table_(table), values_(values), value_amount_(value_amount)
 {}
 
+bool check_date(int date)
+{
+  int y=date/10000;
+  int m=(date%10000)/100;
+  int d=date%100;
+  const int ch[]={0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+  bool flag=((y%4==0&&y%100!=0)||y%400==0);
+  return y > 0
+      && (m > 0)&&(m <= 12)
+      && (d > 0)&&(d <= ((m==2 && flag)?1:0) + ch[m]);
+}
+
 RC InsertStmt::create(Db *db, const InsertSqlNode &inserts, Stmt *&stmt)
 {
   const char *table_name = inserts.relation_name.c_str();
@@ -57,6 +69,14 @@ RC InsertStmt::create(Db *db, const InsertSqlNode &inserts, Stmt *&stmt)
       LOG_WARN("field type mismatch. table=%s, field=%s, field type=%d, value_type=%d",
           table_name, field_meta->name(), field_type, value_type);
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    }
+    if(value_type==DATES)
+    {
+      if(!check_date(values[i].get_date()))
+      {
+        LOG_WARN("INVALID DATE VALUE");
+        return RC::INVALID_ARGUMENT;
+      }
     }
   }
 
