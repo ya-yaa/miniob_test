@@ -24,7 +24,18 @@ const char *ATTR_TYPE_NAME[] = {"undefined", "chars", "ints", "floats", "dates",
 const char *attr_type_to_string(AttrType type)
 {
   if (type >= UNDEFINED && type <= DATES) {
-    return ATTR_TYPE_NAME[type];
+    if(type != DATES){
+      return ATTR_TYPE_NAME[type];
+    }
+    else{
+      static char type_name_upper[32];
+      strncpy(type_name_upper,ATTR_TYPE_NAME[type],sizeof(type_name_upper));
+      type_name_upper[sizeof(type_name_upper)-1] = '\0';
+      for(int i=0;type_name_upper[i];i++){
+        type_name_upper[i]=toupper(type_name_upper[i]);
+      }
+      return type_name_upper;
+    }
   }
   return "unknown";
 }
